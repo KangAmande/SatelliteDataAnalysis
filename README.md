@@ -1,4 +1,4 @@
-## Satellite Data Analysis
+## The Philosopher
 
-This application is used to analyse various kinds of satellite data to monitor, manage, conserve and classify different elements on earth.
+This application can be used to ask questions to a built in AI model, the model answers based on the holy book. It can refer to different theories and ideologies described in the book.
 
