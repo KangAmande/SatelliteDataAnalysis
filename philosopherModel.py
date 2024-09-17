@@ -27,6 +27,25 @@ recognizer = sr.Recognizer()
 engine = pyttsx3.init()
 
 # Build the application
+def answer_question_from_speech(pdf_path):
+    text = extract_text_from_pdf(pdf_path)
+    preprocessed_text = preprocess_text(text)
+
+    while True:
+        with sr.Microphone() as source:
+            print("Ask a question:")
+            audio = recognizer.listen(source)
+            question = recognizer.recognize_google(audio)
+            print(f"Question: {question}")
+
+            if question == "exit":
+                break
+
+            answer = qa_model(question=question, context=preprocessed_text)
+            print(f"Answer: {answer['answer']}")
+
+            engine.say(answer['answer'])
+            engine.runAndWait()
 
 # Run the application
 
