@@ -35,17 +35,27 @@ def answer_question_from_speech(pdf_path):
         with sr.Microphone() as source:
             print("Ask a question:")
             audio = recognizer.listen(source)
-            question = recognizer.recognize_google(audio)
-            print(f"Question: {question}")
+            try:
+                question = recognizer.recognize_google(audio)
+                print(f"Question: {question}")
 
-            if question == "exit":
-                break
+                if question == "exit":
+                    break
+                
+                # Get answer from QA model
+                answer = qa_model(question=question, context=preprocessed_text)
+                print(f"Answer: {answer['answer']}")
 
-            answer = qa_model(question=question, context=preprocessed_text)
-            print(f"Answer: {answer['answer']}")
-
-            engine.say(answer['answer'])
-            engine.runAndWait()
+                # Convert answer to speech
+                engine.say(answer['answer'])
+                engine.runAndWait()
+            except sr.UnknownValueError:
+                print("Could not understand audio")
+            except sr.RequestError as e:
+                print("Could not request results; {0}".format(e))
 
 # Run the application
+pdf_path = "HolyBook.pdf"
+answer_question_from_speech(pdf_path)
+
 
