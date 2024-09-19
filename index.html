@@ -5,10 +5,26 @@
 </head>
 <body>
     <h1>Ask your questions to the philosopher</h1>
-    <button>Ask a question</button>
-    <textarea></textarea>
-    <div></div>
+    <button id="start-recognition">Ask a question</button>
+    <textarea id="question" row="4" cols="50" placeholder="Your question will appear here...."></textarea>
+    <div id="answer"></div>
     <script>
+        const startRecognitionButton = document.getElementById('start-recognition');
+        const questionTextArea = document.getElementById('question');
+        const answerDiv = document.getElementById('answer');
+
+        startRecognitionButton.addEventListener('click', () => {
+            const recognition = new webkitSpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.start();
+
+            recognition.onresult = (event) => {
+                const speechToText = event.results[0][0].transcript;
+                questionTextArea.value = speechToText;
+                recognition.stop();
+                getAnswer(speechToText);
+            };
+        });
         
     </script>
 </body>
