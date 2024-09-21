@@ -13,18 +13,52 @@
         const questionTextArea = document.getElementById('question');
         const answerDiv = document.getElementById('answer');
 
-        startRecognitionButton.addEventListener('click', () => {
+        if('webkitSpeechRecognition' in window) {
             const recognition = new webkitSpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
             recognition.lang = 'en-US';
-            recognition.start();
 
-            recognition.onresult = (event) => {
-                const speechToText = event.results[0][0].transcript;
-                questionTextArea.value = speechToText;
-                recognition.stop();
-                getAnswer(speechToText);
+            recognition.onstart = function() {
+                startRecognitionButton.disabled = true;
+                startRecognitionButton.textContent = 'Listening...';
             };
-        });
+
+            recognition.onresult = function(event) {
+                const transcript = event.results[0][0].transcript;
+                questionTextarea.value = transcript;
+                fetchAnswer(transcript);
+            };
+
+            recognition.onerror = function(event) {
+                console.error(event.error);
+                startRecognitionButton.disabled = false;
+                startRecognitionButton.textContent = 'Ask a Question';
+            };
+
+            recognition.onend = function() {
+                startRecognitionButton.disabled = false;
+                startRecognitionButton.textContent = 'Ask a Question';
+            };
+
+            startRecognitionButton.addEventListener('click', () => {
+                recognition.start();
+            });
+        } else {
+            alert('Your browser does not support the Web Speech API');
+        }
+
+        function fetchAnswer(question) {
+            fetch(`https://api.philosopher.com/answer?question=${question}`)
+                .then(response => response.json())
+                .then(data => {
+                    answerDiv.textContent = data.answer;
+                })
+                .catch(error => {
+                    console.error(error);
+                    answerDiv.textContent = 'An error occurred while fetching the answer';
+                });
+        }
         
     </script>
 </body>
