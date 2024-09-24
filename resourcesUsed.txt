@@ -6,3 +6,6 @@ speech_recognition
 pyttsx3
 transformers 
 pipeline
+webkitSpeechRecognition
+Flask
+jsonify
