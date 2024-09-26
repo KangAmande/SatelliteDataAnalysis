@@ -49,7 +49,7 @@
         }
 
         function fetchAnswer(question) {
-            fetch(`http://api/answer?question=${question}`,{
+            fetch(`http://0.0.0.0:5000/answer`,{
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

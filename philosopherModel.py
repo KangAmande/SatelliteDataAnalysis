@@ -2,6 +2,7 @@ import fitz # PyMuPDF
 import speech_recognition as sr
 import pyttsx3
 from transformers import pipeline
+import torch
 
 # Extract text from the pdf
 def extract_text_from_pdf(pdf_path):
@@ -57,5 +58,8 @@ def answer_question_from_speech(pdf_path):
 # Run the application
 pdf_path = "HolyBook.pdf"
 answer_question_from_speech(pdf_path)
+
+# Save the model
+torch.save(qa_model.state_dict(), "philosopher_model.pt")
 
 
