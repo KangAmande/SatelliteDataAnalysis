@@ -16,6 +16,7 @@ def extract_text_from_pdf(pdf_path):
 # Pre-process the text 
 def preprocess_text(text):
     # Implement tokenization, stop word removal
+    
     return text
 
 # Load pre trained QA model
