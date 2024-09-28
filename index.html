@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Philosopher</title>
 </head>
 <body>
@@ -49,12 +51,12 @@
         }
 
         function fetchAnswer(question) {
-            fetch(`http://0.0.0.0:5000/answer`,{
+            fetch(`http://localhost:5000/answer_question`,{
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({question: question})
+                body: JSON.stringify({question: question, context: "Your context or text from the Holy Book goes here." })
             })
                 .then(response => response.json())
                 .then(data => {
