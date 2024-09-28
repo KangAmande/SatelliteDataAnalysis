@@ -9,3 +9,7 @@ pipeline
 webkitSpeechRecognition
 Flask
 jsonify
+torch
+pyaudio
+nltk
+

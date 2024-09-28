@@ -3,6 +3,16 @@ import speech_recognition as sr
 import pyttsx3
 from transformers import pipeline
 import torch
+import nltk
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+from nltk.stem import WordNetLemmatizer
+
+# Download necessary NLTK data files
+nltk.download('punkt')
+nltk.download('stopwords')
+nltk.download('wordnet')
+nltk.download('punkt_tab')
 
 # Extract text from the pdf
 def extract_text_from_pdf(pdf_path):
@@ -15,9 +25,27 @@ def extract_text_from_pdf(pdf_path):
 
 # Pre-process the text 
 def preprocess_text(text):
-    # Implement tokenization, stop word removal
+    # Tokenize the text
+    tokens = word_tokenize(text)
     
-    return text
+    # Convert to lower case
+    tokens = [word.lower() for word in tokens]
+    
+    # Remove punctuation
+    tokens = [word for word in tokens if word.isalnum()]
+    
+    # Remove stop words
+    stop_words = set(stopwords.words('english'))
+    tokens = [word for word in tokens if word not in stop_words]
+    
+    # Lemmatize the tokens
+    lemmatizer = WordNetLemmatizer()
+    tokens = [lemmatizer.lemmatize(word) for word in tokens]
+    
+    # Join tokens back to a single string
+    preprocessed_text = ' '.join(tokens)
+    
+    return preprocessed_text
 
 # Load pre trained QA model
 qa_model = pipeline("question-answering")
