@@ -56,10 +56,11 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({question: question, context: "Your context or text from the Holy Book goes here." })
+                body: JSON.stringify({question: question})
             })
                 .then(response => response.json())
                 .then(data => {
+                    console.log(data);
                     answerDiv.textContent = data.answer;
                 })
                 .catch(error => {

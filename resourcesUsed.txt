@@ -2,8 +2,6 @@ The Holy Book is the Sikh scripture translated in english by Dr. Sant Singh Khal
 
 fitz
 PyMuPDF
-speech_recognition
-pyttsx3
 transformers 
 pipeline
 webkitSpeechRecognition
