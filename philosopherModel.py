@@ -93,12 +93,7 @@ def load_preprocessed_text():
         preprocessed_text = json.load(f)
     return preprocessed_text
 
-def answer_question(question):
-    preprocessed_text = load_preprocessed_text()
-
-    # Load the pre-trained QA model
-    qa_model = pipeline("question-answering")
-
+def answer_question(question, preprocessed_text, qa_model):
     # Use the pre-trained model for question answering
     answer = qa_model(question=question, context=preprocessed_text)
     return answer
