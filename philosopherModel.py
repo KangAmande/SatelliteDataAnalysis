@@ -1,102 +1,146 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import fitz  # PyMuPDF
-from nltk.tokenize import word_tokenize
-from nltk.corpus import stopwords
-from nltk.stem import WordNetLemmatizer
-import nltk
-from transformers import pipeline
-import json
+import numpy as np
+from transformers import BertModel
+from transformers import BertTokenizer
+from torch.utils.data import DataLoader, Dataset
+from transformers import BertTokenizer, AdamW, get_linear_schedule_with_warmup
 
-# Download necessary NLTK data files
-nltk.download('punkt')
-nltk.download('stopwords')
-nltk.download('wordnet')
+# Set up the device
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-class PhilosopherModel(nn.Module):
+class EnhancedPhilosopherModel(nn.Module):
     def __init__(self):
-        super(PhilosopherModel, self).__init__()
-        self.layer1 = nn.Linear(10, 50)
-        self.layer2 = nn.Linear(50, 1)
+        super(EnhancedPhilosopherModel, self).__init__()
+        self.bert = BertModel.from_pretrained('bert-base-uncased')
+        self.fc1 = nn.Linear(768, 256)
+        self.fc2 = nn.Linear(256, 1)
 
-    def forward(self, x):
-        x = torch.relu(self.layer1(x))
-        x = self.layer2(x)
+    def forward(self, input_ids, attention_mask):
+        outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask)
+        pooled_output = outputs[1]
+        x = torch.relu(self.fc1(pooled_output))
+        x = self.fc2(x)
         return x
 
-def extract_text_from_pdf(pdf_path):
-    doc = fitz.open(pdf_path)
-    text = ""
-    for page_num in range(len(doc)):
-        page = doc.load_page(page_num)
-        text += page.get_text()
-    return text
 
-def preprocess_text(text):
-    tokens = word_tokenize(text)
-    tokens = [word.lower() for word in tokens if word.isalnum()]
-    stop_words = set(stopwords.words('english'))
-    tokens = [word for word in tokens if word not in stop_words]
-    lemmatizer = WordNetLemmatizer()
-    tokens = [lemmatizer.lemmatize(word) for word in tokens]
-    return ' '.join(tokens)
+class QADataset(Dataset):
+    def __init__(self, questions, contexts, answers, tokenizer, max_len):
+        self.questions = questions
+        self.contexts = contexts
+        self.answers = answers
+        self.tokenizer = tokenizer
+        self.max_len = max_len
+
+    def __len__(self):
+        return len(self.questions)
+
+    def __getitem__(self, item):
+        question = str(self.questions[item])
+        context = str(self.contexts[item])
+        answer = self.answers[item]
+
+        encoding = self.tokenizer.encode_plus(
+            question,
+            context,
+            max_length=self.max_len,
+            padding='max_length',
+            truncation=True,
+            return_tensors='pt'
+        )
+
+        return {
+            'input_ids': encoding['input_ids'].flatten(),
+            'attention_mask': encoding['attention_mask'].flatten(),
+            'answer': torch.tensor(answer, dtype=torch.float)
+        }
+
+def train_model(model, data_loader, loss_fn, optimizer, device, scheduler, n_examples):
+    model = model.train()
+    losses = []
+    correct_predictions = 0
+
+    for d in data_loader:
+        input_ids = d["input_ids"].to(device)
+        attention_mask = d["attention_mask"].to(device)
+        answers = d["answer"].to(device)
+
+        outputs = model(
+            input_ids=input_ids,
+            attention_mask=attention_mask
+        )
+
+        loss = loss_fn(outputs, answers)
+        correct_predictions += torch.sum(outputs == answers)
+        losses.append(loss.item())
+
+        loss.backward()
+        optimizer.step()
+        scheduler.step()
+        optimizer.zero_grad()
+
+    return correct_predictions.double() / n_examples, np.mean(losses)
+
+
 
 def train_and_save_model():
-    # Dummy data for illustration
-    inputs = torch.randn(100, 10)  # 100 samples, each with 10 features
-    targets = torch.randn(100, 1)  # 100 target values
+    tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+    model = EnhancedPhilosopherModel()
 
-    # Create an instance of the model
-    model = PhilosopherModel()
+    # Load your dataset here
+    questions = ["What is the meaning of life?", "What is philosophy?"]
+    contexts = ["The meaning of life is a philosophical question.", "Philosophy is the study of general and fundamental questions."]
+    answers = [42, 1]
 
-    # Define a loss function and optimizer
-    criterion = nn.MSELoss()
-    optimizer = optim.SGD(model.parameters(), lr=0.01)
+    dataset = QADataset(questions, contexts, answers, tokenizer, max_len=128)
+    data_loader = DataLoader(dataset, batch_size=8, shuffle=True)
 
-    # Training loop
-    num_epochs = 100
-    for epoch in range(num_epochs):
-        for input, target in zip(inputs, targets):
-            # Forward pass
-            output = model(input)
-            loss = criterion(output, target)
+    optimizer = AdamW(model.parameters(), lr=2e-5, correct_bias=False)
+    total_steps = len(data_loader) * 10  # Number of epochs
+    scheduler = get_linear_schedule_with_warmup(
+        optimizer,
+        num_warmup_steps=0,
+        num_training_steps=total_steps
+    )
+    loss_fn = nn.MSELoss().to(device)
 
-            # Backward pass and optimization
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+    for epoch in range(10):
+        train_acc, train_loss = train_model(
+            model,
+            data_loader,
+            loss_fn,
+            optimizer,
+            device,
+            scheduler,
+            len(dataset)
+        )
+        print(f'Epoch {epoch + 1}/{10}')
+        print(f'Train loss {train_loss} accuracy {train_acc}')
 
-        if (epoch + 1) % 10 == 0:
-            print(f'Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item():.4f}')
+    torch.save(model.state_dict(), 'enhanced_philosopher_model.pt')
+    print("Model saved to enhanced_philosopher_model.pt")
 
-    # Save the model's state dictionary
-    torch.save(model.state_dict(), 'philosopher_model.pt')
-    print("Model saved to philosopher_model.pt")
-
-    # Preprocess and save the text
-    pdf_path = "HolyBook.pdf"
-    text = extract_text_from_pdf(pdf_path)
-    preprocessed_text = preprocess_text(text)
-    with open('preprocessed_text.json', 'w') as f:
-        json.dump(preprocessed_text, f)
-    print("Preprocessed text saved to preprocessed_text.json")
 
 def load_model():
-    model = PhilosopherModel()
-    model.load_state_dict(torch.load('philosopher_model.pt'))
+    model = EnhancedPhilosopherModel()
+    model.load_state_dict(torch.load('enhanced_philosopher_model.pt'))
     model.eval()
     return model
 
-def load_preprocessed_text():
-    with open('preprocessed_text.json', 'r') as f:
-        preprocessed_text = json.load(f)
-    return preprocessed_text
-
 def answer_question(question, preprocessed_text, qa_model):
-    # Use the pre-trained model for question answering
-    answer = qa_model(question=question, context=preprocessed_text)
-    return answer
+    tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+    encoding = tokenizer.encode_plus(
+        question,
+        preprocessed_text,
+        max_length=128,
+        padding='max_length',
+        truncation=True,
+        return_tensors='pt'
+    )
+    input_ids = encoding['input_ids']
+    attention_mask = encoding['attention_mask']
 
-if __name__ == "__main__":
-    train_and_save_model()
+    with torch.no_grad():
+        outputs = qa_model(input_ids=input_ids, attention_mask=attention_mask)
+    return outputs.item()

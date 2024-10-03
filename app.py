@@ -1,14 +1,13 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from philosopherModel import load_preprocessed_text, load_model, answer_question
-from transformers import pipeline
 
 app = Flask(__name__)
 CORS(app)
 
 # Load the preprocessed text and model once when the application starts
 preprocessed_text = load_preprocessed_text()
-qa_model = pipeline("question-answering")
+qa_model = load_model()
 
 @app.route("/answer_question", methods=["POST"])
 def get_answer():
